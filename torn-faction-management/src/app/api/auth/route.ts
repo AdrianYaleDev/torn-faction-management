@@ -4,12 +4,12 @@ import { UserService } from '@/src/lib/user-service';
 import sign from 'jsonwebtoken'; // You'll need a JWT_SECRET in .env
 
 export async function POST(req: Request) {
-  const { username, password, action } = await req.json();
+  const { username, password, email, action } = await req.json();
 
   try {
     let user;
     if (action === 'signup') {
-      user = await UserService.createUser(username, password);
+      user = await UserService.createUser(username, email, password);
     } else {
       user = await UserService.validateUser(username, password);
     }

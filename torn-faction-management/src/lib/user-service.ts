@@ -3,21 +3,22 @@ import { redis } from './redis';
 import bcrypt from 'bcryptjs';
 
 export const UserService = {
-  async createUser(username: string, password: string) {
+  async createUser(username: string, email: string, password: string) {
     const exists = await redis.exists(`user:${username}`);
     if (exists) throw new Error('User already exists');
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Store user object
+    // Store user object with email
     await redis.set(`user:${username}`, {
       username,
+      email, // Added this field
       password: hashedPassword,
-      factionId: null, // To be filled later via API key
+      factionId: null,
       trialStarted: Date.now(),
     });
     
-    return { username };
+    return { username, email };
   },
 
   async validateUser(username: string, password: string) {
