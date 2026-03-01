@@ -1,7 +1,7 @@
 // src/app/api/auth/route.ts
 import { NextResponse } from 'next/server';
 import { UserService } from '@/src/lib/user-service';
-import sign from 'jsonwebtoken'; // You'll need a JWT_SECRET in .env
+import { SignJWT } from 'jose'; // Use jose instead of jsonwebtoken
 
 export async function POST(req: Request) {
   const { username, password, email, action } = await req.json();
@@ -16,15 +16,23 @@ export async function POST(req: Request) {
 
     if (!user) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
 
-    // Create a simple JWT token
-    const token = Buffer.from(JSON.stringify({ username: user.username })).toString('base64');
+    // 1. Prepare the Secret for jose
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+    // 2. Create a SIGNED JWT token
+    const token = await new SignJWT({ username: user.username })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('7d') // Matches your cookie maxAge
+      .sign(secret);
 
     const response = NextResponse.json({ success: true });
     
-    // Set a HttpOnly cookie so the browser can't mess with it
+    // 3. Set the cookie
     response.cookies.set('auth_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7 // 1 week
     });

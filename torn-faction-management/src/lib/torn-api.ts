@@ -1,5 +1,7 @@
 // src/lib/torn-api.ts
 
+import { redis } from "./redis";
+
 const BASE_URL = 'https://api.torn.com';
 
 export interface TornItem {
@@ -26,11 +28,12 @@ export const TornApi = {
     return prices;
   },
 
+
   /**
    * Fetches and parses Armory News logs
    */
-  async getArmoryNews(apiKey: string, from?: number, to?: number) {
-    const url = `${BASE_URL}/faction/?selections=armorynews${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}&key=${apiKey}`;
+  async getArmoryNews(apiKey: string, factionId: string, from?: number, to?: number) {
+    const url = `${BASE_URL}/faction/${factionId}?selections=armorynews${from ? `&from=${from}` : ''}${to ? `&to=${to}` : ''}&key=${apiKey}`;
     const res = await fetch(url);
     return res.json();
   },

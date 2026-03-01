@@ -43,5 +43,22 @@ export const UserService = {
 
     await redis.set(`user:${username}`, user);
     return { success: true };
+  },
+
+  async linkFaction(username: string, encryptedKey: string, factionId: string) {
+    // 1. Get the existing user
+    const user: any = await redis.get(`user:${username}`);
+    if (!user) throw new Error('User not found');
+
+    // 2. Update the specific fields
+    const updatedUser = {
+      ...user,
+      apiKey: encryptedKey,
+      factionId: factionId
+    };
+
+    // 3. Save back to Redis
+    await redis.set(`user:${username}`, updatedUser);
+    return updatedUser;
   }
 };

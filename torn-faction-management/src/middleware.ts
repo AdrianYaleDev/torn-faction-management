@@ -24,12 +24,12 @@ export async function middleware(req: NextRequest) {
       const sub: any = await redis.get(`faction:${factionId}:sub`);
       const now = Math.floor(Date.now() / 1000);
 
-      if (!sub || sub.expiresAt < now) {
-        // Only redirect to /subscribe if they aren't already there
-        if (pathname !== '/dashboard/subscribe') {
-           return NextResponse.redirect(new URL('/dashboard/subscribe', req.url));
-        }
-      }
+    //   if (!sub || sub.expiresAt < now) {
+    //     // Only redirect to /subscribe if they aren't already there
+    //     if (pathname !== '/dashboard/subscribe') {
+    //        return NextResponse.redirect(new URL('/dashboard/subscribe', req.url));
+    //     }
+    //   }
     }
   }
 
