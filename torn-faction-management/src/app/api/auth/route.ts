@@ -1,6 +1,6 @@
 // src/app/api/auth/route.ts
 import { NextResponse } from 'next/server';
-import { UserService } from '@/lib/user-service';
+import { UserService } from '@/src/lib/user-service';
 import sign from 'jsonwebtoken'; // You'll need a JWT_SECRET in .env
 
 export async function POST(req: Request) {

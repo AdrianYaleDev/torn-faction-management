@@ -1,5 +1,5 @@
 // src/app/actions/armory.ts
-import { TornApi } from '../../../lib/torn-api';
+import { TornApi } from '../../lib/torn-api';
 
 export async function getArmoryStats(apiKey: string) {
   const prices = await TornApi.getItemPrices(apiKey);
