@@ -26,5 +26,21 @@ export const UserService = {
 
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
+  },
+
+  async userExists(username: string): Promise<boolean> {
+    const exists = await redis.exists(`user:${username}`);
+    return exists === 1;
+  },
+
+  async updatePassword(username: string, newPassword: string) {
+    const user: any = await redis.get(`user:${username}`);
+    if (!user) throw new Error('User not found');
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNewPassword;
+
+    await redis.set(`user:${username}`, user);
+    return { success: true };
   }
 };
