@@ -1,66 +1,71 @@
 // src/app/actions/armory.ts
-import { TornApi } from '@/src/lib/torn-api';
 
-export async function getArmoryStats(apiKey: string, factionId: string) {
-  // Pass factionId to the API calls to ensure context
-  const prices = await TornApi.getItemPrices(apiKey);
-  const logData = await TornApi.getArmoryNews(apiKey, factionId);
-  
-  const ledger: Record<string, any> = {};
+export async function getArmoryStats(key: string, factionId: string, from: number, to: number) {
+  let allLogs: any[] = [];
+  let currentTo = to;
+  let keepFetching = true;
+  const MAX_PAGES = 5; // Safety cap: fetches up to 500 logs
 
-  if (!logData || !logData.armorynews) return [];
-
-  Object.values(logData.armorynews).forEach((entry: any) => {
-    const text = TornApi.cleanLog(entry.news);
+  while (keepFetching && (allLogs.length < MAX_PAGES * 100)) {
+    const url = `https://api.torn.com/faction/${factionId}?selections=armorynews&key=${key}&from=${from}&to=${currentTo}`;
     
-    // Regex mapping (Your Python logic ported to JS)
-    const bulk = text.match(/(deposited|returned|withdrew|loaned)\s+(\d+)\s?x\s+(.+)/i);
-    const gave = text.match(/gave\s+(\d+)\s?x\s+(.+?)\s+to/i);
-    const used = text.match(/(used|filled) one of the faction's (.+?) items?/i);
+    // const res = await fetch(url, { next: { revalidate: 60 } });
+	const res = await fetch(url, { cache: 'no-store' });
+    const raw = await res.json();
+    const logs = Object.values(raw.armorynews || {}) as any[];
 
-    let qty = 0, item = "", type = "";
-
-    if (bulk) {
-      type = ['deposited', 'returned'].includes(bulk[1].toLowerCase()) ? 'IN' : 'OUT';
-      qty = parseInt(bulk[2]);
-      // Cleaning trailing "from/to" names
-      item = bulk[3].split(/\s(to|from)\s/i)[0].trim();
-    } else if (gave) {
-      type = 'OUT';
-      qty = parseInt(gave[1]);
-      item = gave[2].trim();
-    } else if (used) {
-      type = 'USED';
-      qty = 1;
-      item = used[2].trim();
-    }
-
-    if (item) {
-      // Initialize item if not seen yet
-      if (!ledger[item]) {
-        ledger[item] = { name: item, in: 0, out: 0, used: 0, net: 0 };
-      }
+    if (logs.length === 0) {
+      keepFetching = false;
+    } else {
+      allLogs = [...allLogs, ...logs];
       
-      if (type === 'IN') { 
-        ledger[item].in += qty; 
-        ledger[item].net += qty; 
-      }
-      else if (type === 'OUT') { 
-        ledger[item].out += qty; 
-        ledger[item].net -= qty; 
-      }
-      else if (type === 'USED') { 
-        ledger[item].used += qty; 
-        ledger[item].net -= qty; 
+      // Get the oldest timestamp from this batch
+      const oldestTimestamp = Math.min(...logs.map(l => l.timestamp));
+      
+      // If we got 100 logs, there's likely more. 
+      // Shift our 'to' window to just before the oldest log we found.
+      if (logs.length >= 100 && oldestTimestamp > from) {
+        currentTo = oldestTimestamp - 1;
+      } else {
+        keepFetching = false;
       }
     }
+  }
+
+  // --- PARSING LOGIC (Keep your existing regex logic here) ---
+  const stats: Record<string, any> = {};
+
+  allLogs.forEach((log: any) => {
+    const msg = log.news || "";
+    const userMatch = msg.match(/>([^<]+)<\/a>/);
+    const itemMatch = msg.match(/faction's (.*?) items/);
+    const user = userMatch ? userMatch[1] : "Unknown User";
+    const item = itemMatch ? itemMatch[1] : null;
+
+    if (!item) return;
+
+    const qty = log.quantity || 1;
+    let type: 'in' | 'out' | 'used' = 'out';
+    const lowerMsg = msg.toLowerCase();
+
+    if (lowerMsg.includes('filled') || lowerMsg.includes('deposited') || lowerMsg.includes('returned')) {
+      type = 'in';
+    } else if (lowerMsg.includes('used')) {
+      type = 'used';
+    }
+
+    if (!stats[item]) {
+      stats[item] = { name: item, in: 0, out: 0, used: 0, net: 0, marketValue: 0, users: {} };
+    }
+
+    stats[item][type] += qty;
+    if (!stats[item].users[user]) stats[item].users[user] = { in: 0, out: 0, used: 0 };
+    stats[item].users[user][type] += qty;
   });
 
-  // Attach market values and sort by absolute market impact
-  return Object.values(ledger)
-    .map(item => ({
-      ...item,
-      marketValue: (item.net * (prices[item.name] || 0))
-    }))
-    .sort((a, b) => Math.abs(b.marketValue) - Math.abs(a.marketValue));
+  return Object.values(stats).map(item => ({
+    ...item,
+    net: item.in - (item.out + item.used),
+    marketValue: (item.in - (item.out + item.used)) * 15000 
+  }));
 }
