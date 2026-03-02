@@ -6,6 +6,8 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{type: 'success' | 'error', msg: string} | null>(null);
+  const [adminRefreshing, setAdminRefreshing] = useState(false);
+  const [adminBackfilling, setAdminBackfilling] = useState(false);
 
   const handleLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +35,46 @@ export default function SettingsPage() {
       setStatus({ type: 'error', msg: 'A network error occurred.' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAdminCatalogRefresh = async () => {
+    setAdminRefreshing(true);
+    setStatus(null);
+
+    try {
+      const res = await fetch('/api/admin/catalog/refresh', { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus({ type: 'error', msg: data.error || 'Failed to refresh item catalog' });
+      } else {
+        setStatus({ type: 'success', msg: `Catalog refreshed (${data.categories} categories mapped).` });
+      }
+    } catch {
+      setStatus({ type: 'error', msg: 'Failed to refresh item catalog' });
+    } finally {
+      setAdminRefreshing(false);
+    }
+  };
+
+  const handleAdminCategoryBackfill = async () => {
+    setAdminBackfilling(true);
+    setStatus(null);
+
+    try {
+      const res = await fetch('/api/admin/catalog/backfill', { method: 'POST' });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatus({ type: 'error', msg: data.error || 'Failed to backfill categories' });
+      } else {
+        setStatus({ type: 'success', msg: `Backfill complete (${data.updated} rows updated from ${data.scanned} catalog items).` });
+      }
+    } catch {
+      setStatus({ type: 'error', msg: 'Failed to backfill categories' });
+    } finally {
+      setAdminBackfilling(false);
     }
   };
 
@@ -86,6 +128,25 @@ export default function SettingsPage() {
             </button>
           </form>
         </section>
+
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleAdminCategoryBackfill}
+            disabled={adminBackfilling}
+            className="text-xs px-3 py-1.5 rounded border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition disabled:opacity-50"
+          >
+            {adminBackfilling ? 'Backfilling...' : 'Admin: Backfill Categories'}
+          </button>
+          <button
+            type="button"
+            onClick={handleAdminCatalogRefresh}
+            disabled={adminRefreshing}
+            className="text-xs px-3 py-1.5 rounded border border-slate-700 text-slate-300 hover:text-white hover:border-slate-500 transition disabled:opacity-50"
+          >
+            {adminRefreshing ? 'Refreshing Catalog...' : 'Admin: Refresh Item Catalog'}
+          </button>
+        </div>
 
         {/* Security Info */}
         <div className="bg-blue-900/10 border border-blue-800/20 p-4 rounded-xl flex gap-4">

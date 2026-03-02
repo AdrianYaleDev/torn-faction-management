@@ -57,33 +57,53 @@ export default async function ArmoryPage({ searchParams }: { searchParams: Promi
       factionId,
       timestamp: { gte: from, lte: to }
     }
-  });
+  }) as any[];
 
   // 3. Aggregate Logs into the Ledger format (matching your Python logic)
   const ledger: Record<string, any> = {};
   logs.forEach(log => {
     if (!ledger[log.itemName]) {
-      ledger[log.itemName] = { name: log.itemName, in: 0, out: 0, used: 0, net: 0, users: {} };
+      ledger[log.itemName] = {
+        name: log.itemName,
+        category: log.itemCategory || null,
+        in: 0,
+        out: 0,
+        used: 0,
+        loanTo: 0,
+        loanFrom: 0,
+        net: 0,
+        users: {}
+      };
+    }
+
+    if (!ledger[log.itemName].category && log.itemCategory) {
+      ledger[log.itemName].category = log.itemCategory;
     }
     
     const type = log.type.toLowerCase() as 'in' | 'out' | 'used';
     ledger[log.itemName][type] += log.qty;
+
+    if (log.loanDirection === 'TO') ledger[log.itemName].loanTo += log.qty;
+    if (log.loanDirection === 'FROM') ledger[log.itemName].loanFrom += log.qty;
     
     if (!ledger[log.itemName].users[log.userName]) {
-        ledger[log.itemName].users[log.userName] = { in: 0, out: 0, used: 0 };
+        ledger[log.itemName].users[log.userName] = { in: 0, out: 0, used: 0, loanTo: 0, loanFrom: 0 };
     }
     ledger[log.itemName].users[log.userName][type] += log.qty;
+
+    if (log.loanDirection === 'TO') ledger[log.itemName].users[log.userName].loanTo += log.qty;
+    if (log.loanDirection === 'FROM') ledger[log.itemName].users[log.userName].loanFrom += log.qty;
   });
 
   const itemNames = Object.keys(ledger);
   const prices = itemNames.length
     ? await prisma.itemPrice.findMany({
         where: { name: { in: itemNames } },
-        select: { name: true, marketValue: true },
-      })
+      }) as any[]
     : [];
 
   const priceByName = new Map(prices.map((price) => [price.name, Number(price.marketValue)]));
+  const categoryByName = new Map(prices.map((price) => [price.name, price.category]));
 
   const finalData = Object.values(ledger).map(item => {
     const net = item.in - (item.out + item.used);
@@ -91,6 +111,7 @@ export default async function ArmoryPage({ searchParams }: { searchParams: Promi
 
     return {
       ...item,
+      category: item.category || categoryByName.get(item.name) || 'Uncategorized',
       net,
       unitPrice,
       marketValue: net * unitPrice,

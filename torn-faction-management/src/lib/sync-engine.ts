@@ -1,11 +1,10 @@
 // src/lib/sync-engine.ts
 import { prisma } from '@/src/lib/prisma';
 import { parseArmoryNews } from '@/src/lib/utils/logParser';
+import { getLocalItemCategoryMap, syncItemPrices } from '@/src/lib/item-catalog';
 
-function toMarketValueNumber(value: unknown): number {
-  const numeric = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) return 0;
-  return Math.trunc(numeric);
+function hasUnknownArgument(error: unknown, field: string) {
+  return error instanceof Error && error.message.includes(`Unknown argument \`${field}\``);
 }
 
 export async function runMasterSync(factionId: string, apiKey: string) {
@@ -21,22 +20,9 @@ export async function runMasterSync(factionId: string, apiKey: string) {
     }
   });
 
-  // 1. Update Prices
-  const priceRes = await fetch(`https://api.torn.com/torn/?selections=items&key=${apiKey}`);
-  const priceData = await priceRes.json();
-  if (priceData.items) {
-    const priceUpdates = Object.values(priceData.items).map((item: any) => ({
-      name: item.name,
-      marketValue: toMarketValueNumber(item.market_value),
-    }));
-    for (const p of priceUpdates) {
-      await prisma.itemPrice.upsert({
-        where: { name: p.name },
-        update: { marketValue: p.marketValue },
-        create: { name: p.name, marketValue: p.marketValue },
-      });
-    }
-  }
+  // 1. Update prices and use locally managed categories
+  await syncItemPrices(apiKey);
+  const categoryByName = await getLocalItemCategoryMap();
 
   // 2. Fetch Armory News (Existing Logic)
   const twoWeeksAgo = Math.floor(Date.now() / 1000) - (14 * 24 * 60 * 60);
@@ -67,14 +53,35 @@ export async function runMasterSync(factionId: string, apiKey: string) {
           timestamp: new Date(log.timestamp * 1000),
           userName: parsed.userName,
           itemName: parsed.itemName,
+          itemCategory: categoryByName.get(parsed.itemName) || null,
           qty: parsed.qty,
           type: parsed.type,
+          loanDirection: parsed.loanDirection,
+          loanCounterparty: parsed.loanCounterparty,
           rawNews: log.news
         };
       }).filter(Boolean);
 
       if (parsedBatch.length > 0) {
-        await prisma.armoryLog.createMany({ data: parsedBatch as any, skipDuplicates: true });
+        try {
+          await prisma.armoryLog.createMany({ data: parsedBatch as any, skipDuplicates: true });
+        } catch (error) {
+          const isCompatIssue = hasUnknownArgument(error, 'itemCategory') || hasUnknownArgument(error, 'loanDirection') || hasUnknownArgument(error, 'loanCounterparty');
+          if (!isCompatIssue) throw error;
+
+          const legacyBatch = parsedBatch.map((row: any) => ({
+            tornLogId: row.tornLogId,
+            factionId: row.factionId,
+            timestamp: row.timestamp,
+            userName: row.userName,
+            itemName: row.itemName,
+            qty: row.qty,
+            type: row.type,
+            rawNews: row.rawNews,
+          }));
+
+          await prisma.armoryLog.createMany({ data: legacyBatch as any, skipDuplicates: true });
+        }
       }
 
       const oldestBatchTs = Math.min(...batch.map(([_, l]: any) => l.timestamp));

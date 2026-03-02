@@ -22,8 +22,11 @@ model ArmoryLog {
   timestamp   DateTime
   userName    String
   itemName    String
+  itemCategory String?
   qty         Int
   type        String   // IN, OUT, USED
+  loanDirection String? // TO, FROM
+  loanCounterparty String?
   rawNews     String
   faction     Faction  @relation(fields: [factionId], references: [id])
 
@@ -43,5 +46,25 @@ model FinanceLog {
 model ItemPrice {
   name        String   @id
   marketValue BigInt
+  category    String?
   lastUpdated DateTime @updatedAt
+}
+
+model ItemCatalog {
+  id          Int      @id
+  name        String   @unique
+  category    String?
+  weaponType  String?
+  description String?
+  effect      String?
+  requirement String?
+  buyPrice    BigInt?
+  sellPrice   BigInt?
+  marketValue BigInt
+  circulation BigInt?
+  image       String?
+  tradeable   Boolean
+  lastUpdated DateTime @updatedAt
+
+  @@index([category])
 }

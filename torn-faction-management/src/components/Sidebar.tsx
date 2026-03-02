@@ -2,7 +2,7 @@
 'use client'
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Home, LogOut, ShieldCheck, Settings } from 'lucide-react';
+import { Home, LogOut, ShieldCheck, Settings, Users } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export default function Sidebar() {
   const menuItems = [
     { name: 'Home', href: '/dashboard', icon: Home },
     { name: 'Armory', href: '/dashboard/armory', icon: ShieldCheck },
+    { name: 'Users', href: '/dashboard/armory/users', icon: Users },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   ];
 
