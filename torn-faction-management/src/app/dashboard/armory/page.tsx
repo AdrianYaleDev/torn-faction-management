@@ -1,80 +1,108 @@
 // src/app/dashboard/armory/page.tsx
-import { getArmoryStats } from '../../actions/armory';
+import { prisma } from '@/src/lib/prisma';
+import { cookies } from 'next/headers';
+import { jwtVerify } from 'jose';
 import ArmoryTable from './ArmoryTable';
 import DateFilter from './DateFilter';
-import { cookies } from 'next/headers';
-import Link from 'next/link';
-import { redis } from '@/src/lib/redis';
-import { Key } from 'lucide-react';
-import { decrypt } from '@/src/lib/encryption';
-import { jwtVerify } from 'jose';
+import SyncButton from '@/src/components/SyncButton';
 
-export default async function ArmoryPage({ searchParams }: { searchParams: any }) {
+type ArmorySearchParams = {
+  from?: string | string[];
+  to?: string | string[];
+};
+
+function readUnixParam(value?: string | string[]): number | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.trunc(parsed);
+}
+
+export default async function ArmoryPage({ searchParams }: { searchParams: Promise<ArmorySearchParams> }) {
   const params = await searchParams;
   const cookieStore = await cookies();
-  const factionId = cookieStore.get('faction_id')?.value;
-  const token = cookieStore.get('auth_token')?.value;
+  const authToken = cookieStore.get('auth_token')?.value;
+  const factionId = cookieStore.get('faction_id')?.value || '46805';
 
-  // 1. JWT Verification
-  let username = null;
-  if (token) {
+  let userId = '';
+  if (authToken && process.env.JWT_SECRET) {
     try {
       const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-      const { payload } = await jwtVerify(token, secret);
-      username = payload.username as string;
-    } catch (e) {
-      console.error("Auth error:", e);
+      const { payload } = await jwtVerify(authToken, secret);
+      userId = typeof payload.username === 'string' ? payload.username : '';
+    } catch {
+      userId = '';
     }
   }
+  
+  // 1. Handle Dates (Default 7 days)
+  const now = new Date();
+  const defaultFrom = new Date(now);
+  defaultFrom.setDate(defaultFrom.getDate() - 7);
+  defaultFrom.setHours(0, 0, 0, 0);
 
-  const user: any = username ? await redis.get(`user:${username}`) : null;
+  const defaultTo = new Date(now);
+  defaultTo.setHours(23, 59, 59, 999);
 
-  // 2. Guard Clause
-  if (!user || !user.apiKey || !factionId) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[70vh] text-center px-4">
-        <Key className="text-blue-500 mb-6" size={40} />
-        <h2 className="text-2xl font-bold text-white mb-2">Faction Integration Required</h2>
-        <Link href="/dashboard/settings" className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold">
-          Go to Settings
-        </Link>
-      </div>
-    );
-  }
+  const fromTs = readUnixParam(params.from);
+  const toTs = readUnixParam(params.to);
 
-  // 3. Decrypt Key
-  let decryptedKey: string;
-  try {
-    decryptedKey = decrypt(user.apiKey);
-  } catch (err) {
-    return <div className="p-8 text-red-400">Error: Key Decryption Failed.</div>;
-  }
+  const from = fromTs ? new Date(fromTs * 1000) : defaultFrom;
+  const to = toTs ? new Date(toTs * 1000) : defaultTo;
 
-  // 4. Date Logic
-  const now = Math.floor(Date.now() / 1000);
-  const oneWeekAgo = now - (7 * 24 * 60 * 60);
-  const from = params.from ? parseInt(params.from) : oneWeekAgo;
-  const to = params.to ? parseInt(params.to) : now;
+  // 2. Fetch Data from Aiven (Super Fast!)
+  const logs = await prisma.armoryLog.findMany({
+    where: {
+      factionId,
+      timestamp: { gte: from, lte: to }
+    }
+  });
 
-  const data = await getArmoryStats(decryptedKey, factionId, from, to);
+  // 3. Aggregate Logs into the Ledger format (matching your Python logic)
+  const ledger: Record<string, any> = {};
+  logs.forEach(log => {
+    if (!ledger[log.itemName]) {
+      ledger[log.itemName] = { name: log.itemName, in: 0, out: 0, used: 0, net: 0, users: {} };
+    }
+    
+    const type = log.type.toLowerCase() as 'in' | 'out' | 'used';
+    ledger[log.itemName][type] += log.qty;
+    
+    if (!ledger[log.itemName].users[log.userName]) {
+        ledger[log.itemName].users[log.userName] = { in: 0, out: 0, used: 0 };
+    }
+    ledger[log.itemName].users[log.userName][type] += log.qty;
+  });
+
+  const itemNames = Object.keys(ledger);
+  const prices = itemNames.length
+    ? await prisma.itemPrice.findMany({
+        where: { name: { in: itemNames } },
+        select: { name: true, marketValue: true },
+      })
+    : [];
+
+  const priceByName = new Map(prices.map((price) => [price.name, Number(price.marketValue)]));
+
+  const finalData = Object.values(ledger).map(item => ({
+    ...item,
+    net: item.in - (item.out + item.used),
+    marketValue: priceByName.get(item.name) ?? 0
+  }));
 
   return (
-    <div className="animate-in fade-in duration-500 space-y-6">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Armory Ledger</h1>
-          <p className="text-slate-400 text-sm">Faction #{factionId} | Logged in as {username}</p>
+    <div className="space-y-6">
+      <header className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-white">Faction Ledger (Database)</h1>
+        <div className="flex gap-4">
+           <DateFilter defaultFrom={Math.floor(from.getTime()/1000)} defaultTo={Math.floor(to.getTime()/1000)} />
+    		   {userId ? <SyncButton factionId={factionId} userId={userId} /> : null}
+           {/* Add a Sync Button Component here */}
         </div>
-        <DateFilter defaultFrom={from} defaultTo={to} />
       </header>
 
-      {data.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 p-12 text-center rounded-xl text-slate-400">
-          No logs found for this date range.
-        </div>
-      ) : (
-        <ArmoryTable initialData={data} />
-      )}
+      <ArmoryTable initialData={finalData} />
     </div>
   );
 }

@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Faction {
+  id           String       @id
+  name         String?
+  lastSync     DateTime     @default(now())
+  syncApiKey   String       // Encrypted Master Key
+  logs         ArmoryLog[]
+  finances     FinanceLog[]
+}
+
+model ArmoryLog {
+  id          String   @id @default(cuid())
+  tornLogId   String   @unique
+  factionId   String
+  timestamp   DateTime
+  userName    String
+  itemName    String
+  qty         Int
+  type        String   // IN, OUT, USED
+  rawNews     String
+  faction     Faction  @relation(fields: [factionId], references: [id])
+
+  @@index([factionId, timestamp])
+}
+
+model FinanceLog {
+  id          String   @id @default(cuid())
+  tornLogId   String   @unique
+  factionId   String
+  timestamp   DateTime
+  type        String   // DEPOSIT, WITHDRAWAL, CRIME
+  amount      BigInt
+  faction     Faction  @relation(fields: [factionId], references: [id])
+}
+
+model ItemPrice {
+  name        String   @id
+  marketValue BigInt
+  lastUpdated DateTime @updatedAt
+}

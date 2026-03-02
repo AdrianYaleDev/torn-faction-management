@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, ArrowUpDown, User } from 'lucide-react';
 
 export default function ArmoryTable({ initialData }: { initialData: any[] }) {
@@ -7,8 +7,14 @@ export default function ArmoryTable({ initialData }: { initialData: any[] }) {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [search, setSearch] = useState('');
 
-  const getRowKey = (item: any, index: number) => `${item.name}-${index}`;
+  useEffect(() => {
+    setData(initialData);
+    setExpandedRows({});
+  }, [initialData]);
+
+  const getRowKey = (item: any) => item.name;
 
   const toggleRow = (rowKey: string) => {
     setExpandedRows(prev => ({ ...prev, [rowKey]: !prev[rowKey] }));
@@ -28,8 +34,26 @@ export default function ArmoryTable({ initialData }: { initialData: any[] }) {
     setSortDir(dir);
   };
 
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredData = normalizedSearch
+    ? data.filter((item) => {
+        const itemMatch = item.name.toLowerCase().includes(normalizedSearch);
+        if (itemMatch) return true;
+        return Object.keys(item.users || {}).some((user) => user.toLowerCase().includes(normalizedSearch));
+      })
+    : data;
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      <div className="p-3 border-b border-slate-800 bg-slate-900">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search item or user..."
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 outline-none"
+        />
+      </div>
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-slate-800/50 text-slate-400 text-[10px] uppercase font-bold tracking-[0.2em]">
@@ -44,8 +68,8 @@ export default function ArmoryTable({ initialData }: { initialData: any[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/50">
-          {data.map((item, index) => {
-            const rowKey = getRowKey(item, index);
+          {filteredData.map((item) => {
+            const rowKey = getRowKey(item);
 
             return (
             <React.Fragment key={rowKey}>
@@ -108,6 +132,13 @@ export default function ArmoryTable({ initialData }: { initialData: any[] }) {
               )}
             </React.Fragment>
           )})}
+          {filteredData.length === 0 && (
+            <tr>
+              <td colSpan={6} className="p-6 text-center text-sm text-slate-400">
+                No matching ledger rows.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
