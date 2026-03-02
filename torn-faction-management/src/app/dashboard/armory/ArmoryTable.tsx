@@ -87,8 +87,8 @@ export default function ArmoryTable({ initialData }: { initialData: any[] }) {
                 <td className={`p-4 font-bold font-mono text-sm ${item.net >= 0 ? 'text-slate-100' : 'text-red-500'}`}>
                   {item.net > 0 ? `+${item.net}` : item.net}
                 </td>
-                <td className="p-4 text-right font-mono text-sm text-green-500">
-                  ${item.marketValue.toLocaleString()}
+                <td className={`p-4 text-right font-mono text-sm ${item.marketValue >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                  {item.marketValue > 0 ? '+' : item.marketValue < 0 ? '-' : ''}${Math.abs(item.marketValue).toLocaleString()}
                 </td>
               </tr>
               

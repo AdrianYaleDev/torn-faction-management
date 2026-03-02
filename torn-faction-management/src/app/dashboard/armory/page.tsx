@@ -85,11 +85,17 @@ export default async function ArmoryPage({ searchParams }: { searchParams: Promi
 
   const priceByName = new Map(prices.map((price) => [price.name, Number(price.marketValue)]));
 
-  const finalData = Object.values(ledger).map(item => ({
-    ...item,
-    net: item.in - (item.out + item.used),
-    marketValue: priceByName.get(item.name) ?? 0
-  }));
+  const finalData = Object.values(ledger).map(item => {
+    const net = item.in - (item.out + item.used);
+    const unitPrice = priceByName.get(item.name) ?? 0;
+
+    return {
+      ...item,
+      net,
+      unitPrice,
+      marketValue: net * unitPrice,
+    };
+  });
 
   return (
     <div className="space-y-6">
