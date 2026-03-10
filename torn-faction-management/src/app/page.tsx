@@ -158,16 +158,22 @@ export default function LandingPage() {
             </>
           )}
           {(view === 'signup' || view === 'forgot') && (
-            <button 
+            <button
               onClick={() => {
                 setView('login');
                 setStep('request');
-              }} 
+              }}
               className="hover:text-white transition"
             >
               Back to Login
             </button>
           )}
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-slate-800 text-center">
+          <a href="/terms" className="text-xs text-slate-600 hover:text-slate-400 transition">
+            Terms of Service
+          </a>
         </div>
       </div>
     </main>
