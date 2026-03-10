@@ -206,126 +206,112 @@ export default function UsersTable({ initialData }: { initialData: UserRow[] }) 
           Clear
         </button>
       </div>
-      <table className="w-full text-left border-collapse table-fixed">
-        <colgroup>
-          <col className="w-[40%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-        </colgroup>
-        <thead>
-          <tr className="bg-slate-800/50 text-slate-400 text-[10px] uppercase font-bold tracking-[0.2em]">
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('name')}>
-              User Name <ArrowUpDown size={12} className="inline ml-1" />
-            </th>
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('in')}>
-              In <ArrowUpDown size={12} className="inline ml-1" />
-            </th>
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('out')}>
-              Out <ArrowUpDown size={12} className="inline ml-1" />
-            </th>
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('used')}>
-              Used <ArrowUpDown size={12} className="inline ml-1" />
-            </th>
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('net')}>
-              Net Qty <ArrowUpDown size={12} className="inline ml-1" />
-            </th>
-            <th className="p-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('marketValue')}>
-              Market Value <ArrowUpDown size={12} className="inline ml-1" />
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-800/50">
-          {sortedUsers.map((user) => {
-            const rowKey = user.name;
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-800/50 text-slate-400 text-[10px] uppercase font-bold tracking-[0.2em]">
+              <th className="p-2 sm:p-4 cursor-pointer hover:text-white" onClick={() => handleSort('name')}>
+                User Name <ArrowUpDown size={12} className="inline ml-1" />
+              </th>
+              <th className="hidden sm:table-cell p-4 cursor-pointer hover:text-white" onClick={() => handleSort('in')}>
+                In <ArrowUpDown size={12} className="inline ml-1" />
+              </th>
+              <th className="hidden sm:table-cell p-4 cursor-pointer hover:text-white" onClick={() => handleSort('out')}>
+                Out <ArrowUpDown size={12} className="inline ml-1" />
+              </th>
+              <th className="hidden sm:table-cell p-4 cursor-pointer hover:text-white" onClick={() => handleSort('used')}>
+                Used <ArrowUpDown size={12} className="inline ml-1" />
+              </th>
+              <th className="p-2 sm:p-4 cursor-pointer hover:text-white whitespace-nowrap" onClick={() => handleSort('net')}>
+                Net Qty <ArrowUpDown size={12} className="inline ml-1" />
+              </th>
+              <th className="p-2 sm:p-4 text-right cursor-pointer hover:text-white whitespace-nowrap" onClick={() => handleSort('marketValue')}>
+                Value <ArrowUpDown size={12} className="inline ml-1" />
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/50">
+            {sortedUsers.map((user) => {
+              const rowKey = user.name;
 
-            return (
-              <React.Fragment key={rowKey}>
-                <tr
-                  onClick={() => toggleRow(rowKey)}
-                  className="hover:bg-blue-500/[0.04] transition-colors group cursor-pointer"
-                >
-                  <td className="p-4 flex items-center gap-3 text-sm">
-                    {expandedRows[rowKey] ? (
-                      <ChevronUp size={16} className="text-blue-500" />
-                    ) : (
-                      <ChevronDown size={16} className="text-slate-500" />
-                    )}
-                    <span className="font-medium text-slate-200 group-hover:text-white">{user.name}</span>
-                  </td>
-                  <td className="p-4 text-green-400 font-mono text-sm">+{user.in}</td>
-                  <td className="p-4 text-red-400 font-mono text-sm">-{user.out}</td>
-                  <td className="p-4 text-orange-400 font-mono text-sm">{user.used}</td>
-                  <td className={`p-4 font-bold font-mono text-sm ${user.net >= 0 ? 'text-slate-100' : 'text-red-500'}`}>
-                    {user.net > 0 ? `+${user.net}` : user.net}
-                  </td>
-                  <td className={`p-4 text-right font-mono text-sm ${user.marketValue >= 0 ? 'text-green-500' : 'text-red-400'}`}>
-                    {user.marketValue > 0 ? '+' : user.marketValue < 0 ? '-' : ''}${Math.abs(user.marketValue).toLocaleString()}
-                  </td>
-                </tr>
-
-                {expandedRows[rowKey] && (
-                  <tr className="bg-black/20 border-l-4 border-blue-600/50">
-                    <td colSpan={6} className="p-0">
-                      <div className="overflow-hidden">
-                        <table className="w-full text-left border-collapse bg-slate-800/20 table-fixed">
-                          <colgroup>
-                            <col className="w-[40%]" />
-                            <col className="w-[12%]" />
-                            <col className="w-[12%]" />
-                            <col className="w-[12%]" />
-                            <col className="w-[12%]" />
-                            <col className="w-[12%]" />
-                          </colgroup>
-                          <tbody>
-                            {user.items.map((item) => (
-                              <tr key={`${user.name}-${item.name}`} className="border-b border-slate-800/30 last:border-0 hover:bg-white/[0.02]">
-                                <td className="p-3 pl-12">
-                                  <div className="flex items-center gap-2">
-                                    <Package size={12} className="text-slate-500" />
-                                    <div className="flex flex-col">
-                                      <span className="text-xs text-slate-400 font-medium">{item.name}</span>
-                                      <span className="text-[10px] text-slate-500">{item.category} • To: {item.loanTo} • From: {item.loanFrom}</span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="p-3 text-xs font-mono text-green-500/70">
-                                  {item.in > 0 ? `+${item.in}` : ''}
-                                </td>
-                                <td className="p-3 text-xs font-mono text-red-500/70">
-                                  {item.out > 0 ? `-${item.out}` : ''}
-                                </td>
-                                <td className="p-3 text-xs font-mono text-orange-500/70">
-                                  {item.used > 0 ? item.used : ''}
-                                </td>
-                                <td className={`p-3 text-xs font-mono ${item.net >= 0 ? 'text-slate-300' : 'text-red-400'}`}>
-                                  {item.net > 0 ? `+${item.net}` : item.net}
-                                </td>
-                                <td className={`p-3 text-xs font-mono text-right ${item.marketValue >= 0 ? 'text-green-500/80' : 'text-red-400/80'}`}>
-                                  {item.marketValue > 0 ? '+' : item.marketValue < 0 ? '-' : ''}${Math.abs(item.marketValue).toLocaleString()}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+              return (
+                <React.Fragment key={rowKey}>
+                  <tr
+                    onClick={() => toggleRow(rowKey)}
+                    className="hover:bg-blue-500/[0.04] transition-colors group cursor-pointer"
+                  >
+                    <td className="p-2 sm:p-4 flex items-center gap-2 sm:gap-3 text-sm">
+                      {expandedRows[rowKey] ? (
+                        <ChevronUp size={16} className="text-blue-500 shrink-0" />
+                      ) : (
+                        <ChevronDown size={16} className="text-slate-500 shrink-0" />
+                      )}
+                      <span className="font-medium text-slate-200 group-hover:text-white truncate">{user.name}</span>
+                    </td>
+                    <td className="hidden sm:table-cell p-4 text-green-400 font-mono text-sm">+{user.in}</td>
+                    <td className="hidden sm:table-cell p-4 text-red-400 font-mono text-sm">-{user.out}</td>
+                    <td className="hidden sm:table-cell p-4 text-orange-400 font-mono text-sm">{user.used}</td>
+                    <td className={`p-2 sm:p-4 font-bold font-mono text-sm ${user.net >= 0 ? 'text-slate-100' : 'text-red-500'}`}>
+                      {user.net > 0 ? `+${user.net}` : user.net}
+                    </td>
+                    <td className={`p-2 sm:p-4 text-right font-mono text-sm ${user.marketValue >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                      {user.marketValue > 0 ? '+' : user.marketValue < 0 ? '-' : ''}${Math.abs(user.marketValue).toLocaleString()}
                     </td>
                   </tr>
-                )}
-              </React.Fragment>
-            );
-          })}
-          {sortedUsers.length === 0 && (
-            <tr>
-              <td colSpan={6} className="p-6 text-center text-sm text-slate-400">
-                No users match the selected item filters.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+
+                  {expandedRows[rowKey] && (
+                    <tr className="bg-black/20 border-l-4 border-blue-600/50">
+                      <td colSpan={6} className="p-0">
+                        <div className="overflow-hidden">
+                          <table className="w-full text-left border-collapse bg-slate-800/20">
+                            <tbody>
+                              {user.items.map((item) => (
+                                <tr key={`${user.name}-${item.name}`} className="border-b border-slate-800/30 last:border-0 hover:bg-white/[0.02]">
+                                  <td className="p-2 sm:p-3 pl-7 sm:pl-12">
+                                    <div className="flex items-center gap-2">
+                                      <Package size={12} className="text-slate-500 shrink-0" />
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="text-xs text-slate-400 font-medium truncate">{item.name}</span>
+                                        <span className="text-[10px] text-slate-500 truncate">{item.category} • L↑{item.loanTo} L↓{item.loanFrom}</span>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="hidden sm:table-cell p-3 text-xs font-mono text-green-500/70">
+                                    {item.in > 0 ? `+${item.in}` : ''}
+                                  </td>
+                                  <td className="hidden sm:table-cell p-3 text-xs font-mono text-red-500/70">
+                                    {item.out > 0 ? `-${item.out}` : ''}
+                                  </td>
+                                  <td className="hidden sm:table-cell p-3 text-xs font-mono text-orange-500/70">
+                                    {item.used > 0 ? item.used : ''}
+                                  </td>
+                                  <td className={`p-2 sm:p-3 text-xs font-mono ${item.net >= 0 ? 'text-slate-300' : 'text-red-400'}`}>
+                                    {item.net > 0 ? `+${item.net}` : item.net}
+                                  </td>
+                                  <td className={`p-2 sm:p-3 text-xs font-mono text-right ${item.marketValue >= 0 ? 'text-green-500/80' : 'text-red-400/80'}`}>
+                                    {item.marketValue > 0 ? '+' : item.marketValue < 0 ? '-' : ''}${Math.abs(item.marketValue).toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+            {sortedUsers.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-6 text-center text-sm text-slate-400">
+                  No users match the selected item filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

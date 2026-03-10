@@ -120,12 +120,11 @@ export default async function ArmoryPage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="space-y-6">
-      <header className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-white">Faction Ledger (Database)</h1>
-        <div className="flex gap-4">
+      <header className="flex flex-wrap justify-between items-start gap-3">
+        <h1 className="text-2xl font-bold text-white">Faction Ledger</h1>
+        <div className="flex flex-wrap gap-3 items-center">
            <DateFilter defaultFrom={Math.floor(from.getTime()/1000)} defaultTo={Math.floor(to.getTime()/1000)} />
     		   {userId ? <SyncButton factionId={factionId} userId={userId} /> : null}
-           {/* Add a Sync Button Component here */}
         </div>
       </header>
 

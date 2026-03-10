@@ -155,115 +155,101 @@ export default function ArmoryTable({ initialData }: { initialData: any[] }) {
           className="w-full sm:flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 outline-none"
         />
       </div>
-      <table className="w-full text-left border-collapse table-fixed">
-        <colgroup>
-          <col className="w-[40%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-        </colgroup>
-        <thead>
-          <tr className="bg-slate-800/50 text-slate-400 text-[10px] uppercase font-bold tracking-[0.2em]">
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('name')}>
-              Item Name <ArrowUpDown size={12} className="inline ml-1" />
-            </th>
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('in')}>In</th>
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('out')}>Out</th>
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('used')}>Used</th>
-            <th className="p-4 cursor-pointer hover:text-white" onClick={() => handleSort('net')}>Net Qty</th>
-            <th className="p-4 text-right cursor-pointer hover:text-white" onClick={() => handleSort('marketValue')}>Market Value</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-800/50">
-          {filteredData.map((item) => {
-            const rowKey = getRowKey(item);
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-800/50 text-slate-400 text-[10px] uppercase font-bold tracking-[0.2em]">
+              <th className="p-2 sm:p-4 cursor-pointer hover:text-white" onClick={() => handleSort('name')}>
+                Item Name <ArrowUpDown size={12} className="inline ml-1" />
+              </th>
+              <th className="hidden sm:table-cell p-4 cursor-pointer hover:text-white" onClick={() => handleSort('in')}>In</th>
+              <th className="hidden sm:table-cell p-4 cursor-pointer hover:text-white" onClick={() => handleSort('out')}>Out</th>
+              <th className="hidden sm:table-cell p-4 cursor-pointer hover:text-white" onClick={() => handleSort('used')}>Used</th>
+              <th className="p-2 sm:p-4 cursor-pointer hover:text-white whitespace-nowrap" onClick={() => handleSort('net')}>Net Qty</th>
+              <th className="p-2 sm:p-4 text-right cursor-pointer hover:text-white whitespace-nowrap" onClick={() => handleSort('marketValue')}>Value</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/50">
+            {filteredData.map((item) => {
+              const rowKey = getRowKey(item);
 
-            return (
-            <React.Fragment key={rowKey}>
-              <tr 
-                onClick={() => toggleRow(rowKey)}
-                className="hover:bg-blue-500/[0.04] transition-colors group cursor-pointer"
-              >
-                <td className="p-4 flex items-center gap-3 text-sm">
-                  {expandedRows[rowKey] ? <ChevronUp size={16} className="text-blue-500" /> : <ChevronDown size={16} className="text-slate-500" />}
-                  <div className="flex flex-col">
-                    <span className="font-medium text-slate-200 group-hover:text-white">{item.name}</span>
-                    <span className="text-[11px] text-slate-500">{item.category || 'Uncategorized'} • Loans To: {item.loanTo || 0} • Loans From: {item.loanFrom || 0}</span>
-                  </div>
-                </td>
-                <td className="p-4 text-green-400 font-mono text-sm">+{item.in}</td>
-                <td className="p-4 text-red-400 font-mono text-sm">-{item.out}</td>
-                <td className="p-4 text-orange-400 font-mono text-sm">{item.used}</td>
-                <td className={`p-4 font-bold font-mono text-sm ${item.net >= 0 ? 'text-slate-100' : 'text-red-500'}`}>
-                  {item.net > 0 ? `+${item.net}` : item.net}
-                </td>
-                <td className={`p-4 text-right font-mono text-sm ${item.marketValue >= 0 ? 'text-green-500' : 'text-red-400'}`}>
-                  {item.marketValue > 0 ? '+' : item.marketValue < 0 ? '-' : ''}${Math.abs(item.marketValue).toLocaleString()}
-                </td>
-              </tr>
-              
-              {/* DROPDOWN USER LIST */}
-              {expandedRows[rowKey] && (
-                <tr className="bg-black/20 border-l-4 border-blue-600/50">
-                  <td colSpan={6} className="p-0">
-                    <div className="overflow-hidden">
-                      <table className="w-full text-left border-collapse bg-slate-800/20 table-fixed">
-                        <colgroup>
-                          <col className="w-[40%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[12%]" />
-                          <col className="w-[12%]" />
-                        </colgroup>
-                        <tbody>
-                          {Object.entries(item.users).map(([user, val]: any) => (
-                            <tr key={user} className="border-b border-slate-800/30 last:border-0 hover:bg-white/[0.02]">
-                              <td className="p-3 pl-12">
-                                <div className="flex items-center gap-2">
-                                  <User size={12} className="text-slate-500" />
-                                  <div className="flex flex-col">
-                                    <span className="text-xs text-slate-400 font-medium">{user}</span>
-                                    <span className="text-[10px] text-slate-500">Loans To: {val.loanTo || 0} • Loans From: {val.loanFrom || 0}</span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="p-3 text-xs font-mono text-green-500/70">
-                                {val.in > 0 ? `+${val.in}` : ''}
-                              </td>
-                              <td className="p-3 text-xs font-mono text-red-500/70">
-                                {val.out > 0 ? `-${val.out}` : ''}
-                              </td>
-                              <td className="p-3 text-xs font-mono text-orange-500/70">
-                                {val.used > 0 ? val.used : ''}
-                              </td>
-                              <td className={`p-3 text-xs font-mono ${val.in - (val.out + val.used) >= 0 ? 'text-slate-300' : 'text-red-400'}`}>
-                                {val.in - (val.out + val.used) > 0 ? `+${val.in - (val.out + val.used)}` : val.in - (val.out + val.used)}
-                              </td>
-                              <td className={`p-3 text-xs font-mono text-right ${(val.in - (val.out + val.used)) * item.unitPrice >= 0 ? 'text-green-500/80' : 'text-red-400/80'}`}>
-                                {(val.in - (val.out + val.used)) * item.unitPrice > 0 ? '+' : (val.in - (val.out + val.used)) * item.unitPrice < 0 ? '-' : ''}${Math.abs((val.in - (val.out + val.used)) * item.unitPrice).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+              return (
+              <React.Fragment key={rowKey}>
+                <tr
+                  onClick={() => toggleRow(rowKey)}
+                  className="hover:bg-blue-500/[0.04] transition-colors group cursor-pointer"
+                >
+                  <td className="p-2 sm:p-4 flex items-center gap-2 sm:gap-3 text-sm">
+                    {expandedRows[rowKey] ? <ChevronUp size={16} className="text-blue-500 shrink-0" /> : <ChevronDown size={16} className="text-slate-500 shrink-0" />}
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium text-slate-200 group-hover:text-white truncate">{item.name}</span>
+                      <span className="text-[11px] text-slate-500 truncate">{item.category || 'Uncategorized'} • L↑{item.loanTo || 0} L↓{item.loanFrom || 0}</span>
                     </div>
                   </td>
+                  <td className="hidden sm:table-cell p-4 text-green-400 font-mono text-sm">+{item.in}</td>
+                  <td className="hidden sm:table-cell p-4 text-red-400 font-mono text-sm">-{item.out}</td>
+                  <td className="hidden sm:table-cell p-4 text-orange-400 font-mono text-sm">{item.used}</td>
+                  <td className={`p-2 sm:p-4 font-bold font-mono text-sm ${item.net >= 0 ? 'text-slate-100' : 'text-red-500'}`}>
+                    {item.net > 0 ? `+${item.net}` : item.net}
+                  </td>
+                  <td className={`p-2 sm:p-4 text-right font-mono text-sm ${item.marketValue >= 0 ? 'text-green-500' : 'text-red-400'}`}>
+                    {item.marketValue > 0 ? '+' : item.marketValue < 0 ? '-' : ''}${Math.abs(item.marketValue).toLocaleString()}
+                  </td>
                 </tr>
-              )}
-            </React.Fragment>
-          )})}
-          {filteredData.length === 0 && (
-            <tr>
-              <td colSpan={6} className="p-6 text-center text-sm text-slate-400">
-                No matching ledger rows.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+
+                {/* DROPDOWN USER LIST */}
+                {expandedRows[rowKey] && (
+                  <tr className="bg-black/20 border-l-4 border-blue-600/50">
+                    <td colSpan={6} className="p-0">
+                      <div className="overflow-hidden">
+                        <table className="w-full text-left border-collapse bg-slate-800/20">
+                          <tbody>
+                            {Object.entries(item.users).map(([user, val]: any) => (
+                              <tr key={user} className="border-b border-slate-800/30 last:border-0 hover:bg-white/[0.02]">
+                                <td className="p-2 sm:p-3 pl-7 sm:pl-12">
+                                  <div className="flex items-center gap-2">
+                                    <User size={12} className="text-slate-500 shrink-0" />
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="text-xs text-slate-400 font-medium truncate">{user}</span>
+                                      <span className="text-[10px] text-slate-500">L↑{val.loanTo || 0} L↓{val.loanFrom || 0}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="hidden sm:table-cell p-3 text-xs font-mono text-green-500/70">
+                                  {val.in > 0 ? `+${val.in}` : ''}
+                                </td>
+                                <td className="hidden sm:table-cell p-3 text-xs font-mono text-red-500/70">
+                                  {val.out > 0 ? `-${val.out}` : ''}
+                                </td>
+                                <td className="hidden sm:table-cell p-3 text-xs font-mono text-orange-500/70">
+                                  {val.used > 0 ? val.used : ''}
+                                </td>
+                                <td className={`p-2 sm:p-3 text-xs font-mono ${val.in - (val.out + val.used) >= 0 ? 'text-slate-300' : 'text-red-400'}`}>
+                                  {val.in - (val.out + val.used) > 0 ? `+${val.in - (val.out + val.used)}` : val.in - (val.out + val.used)}
+                                </td>
+                                <td className={`p-2 sm:p-3 text-xs font-mono text-right ${(val.in - (val.out + val.used)) * item.unitPrice >= 0 ? 'text-green-500/80' : 'text-red-400/80'}`}>
+                                  {(val.in - (val.out + val.used)) * item.unitPrice > 0 ? '+' : (val.in - (val.out + val.used)) * item.unitPrice < 0 ? '-' : ''}${Math.abs((val.in - (val.out + val.used)) * item.unitPrice).toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            )})}
+            {filteredData.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-6 text-center text-sm text-slate-400">
+                  No matching ledger rows.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
