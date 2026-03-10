@@ -8,7 +8,7 @@ function toOptionalBigInt(value: unknown): bigint | null {
 
 function toBigInt(value: unknown): bigint {
   const numeric = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) return 0n;
+  if (!Number.isFinite(numeric) || numeric <= 0) return BigInt(0);
   return BigInt(Math.trunc(numeric));
 }
 
